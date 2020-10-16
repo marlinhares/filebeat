@@ -1,11 +1,17 @@
-filebeat.inputs:
-- type: container
-  paths:
-    - '/var/lib/docker/containers/*/*.log'
+setup.kibana.host: "http://kibana:5601"
+
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
 
 processors:
-- add_docker_metadata:
-    host: "unix:///var/run/docker.sock"
+- add_cloud_metadata: ~
 
 - drop_event:
     when:
@@ -13,17 +19,31 @@ processors:
             - contains:
                 container.name: "logstash-indexer"
             - contains:
+                docker.container.image: "filebeat"
+            - contains:
+                docker.container.image: "rancher/healthcheck"
+            - contains:
+                docker.container.image: "rancher/net"
+            - contains:
+                docker.container.image: "rancher/storage"
+            - contains:
+                docker.container.image: "rancher/scheduler"
+            - contains:
+                docker.container.image: "rancher/metadata"
+            - contains:
+                docker.container.image: "rancher/dns"
+            - contains:
+                docker.container.image: "rancher/network-manager"
+            - contains:
+                docker.container.image: "rancher/agent"
+            - contains:
                 container.labels.io_rancher_project_name: "network-services"
             - contains:
                 container.labels.io_rancher_project_name: "ipsec"
 
-- decode_json_fields:
-    fields: ["message"]
-    target: "json"
-    overwrite_keys: true
-
-output.logstash:
-    hosts: ["logstash:5044"]
-
-logging.json: true
-logging.metrics.enabled: false
+output.elasticsearch:
+  hosts: '${ELASTICSEARCH_HOSTS:elasticsearch:9200}'
+  username: 'elastic'
+  password: 'elastic123PEN'
+#output.logstash:
+#    hosts: ["logstash:5044"]
